@@ -1,0 +1,10 @@
+[package]
+name = "regl-app"
+version = "0.1.0"
+authors = ["Ilkka Rauta <ilkka.rauta@gmail.com>"]
+
+[dependencies.glfw]
+git = "https://github.com/bjz/glfw-rs.git"
+
+[dependencies.regl]
+git = "https://github.com/irauta/regl.git"
