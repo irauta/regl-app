@@ -43,10 +43,12 @@ static VS_SOURCE: &'static str = "
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec4 color;
 
+uniform float scale;
+
 out vec4 v_color;
 
 void main() {
-    gl_Position.xyz = position;
+    gl_Position.xyz = position * scale;
     gl_Position.w = 1.0;
     v_color = color;
 }
@@ -111,6 +113,13 @@ fn main() {
     let vs = Shader::new(&mut context, &ShaderSource(ShaderType::VertexShader, VS_SOURCE)).unwrap();
     let fs = Shader::new(&mut context, &ShaderSource(ShaderType::FragmentShader, FS_SOURCE)).unwrap();
     let program = Program::new(&mut context, &[vs, fs]).unwrap();
+
+    let uniform_info = program.uniform_info();
+    let scale = uniform_info.find_global("scale").unwrap();
+    program.uniform_f32(scale.location, scale.uniform_type, 1, &[1f32]).unwrap();
+
+    println!("{:#?}", program.attribute_info());
+    println!("{:#?}", uniform_info);
 
     while !window.should_close() {
         glfw.poll_events();
