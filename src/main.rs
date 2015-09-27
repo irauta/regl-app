@@ -5,7 +5,7 @@ extern crate regl;
 use glfw::{Action, Context, Key};
 use regl::{Shader,ShaderSource,ShaderType,Program,
     VertexArray,Buffer,BufferTarget,BufferUsage,
-    VertexAttribute,VertexAttributeType,PrimitiveMode};
+    VertexAttribute,VertexAttributeType,PrimitiveMode,IndexType};
 
 #[allow(dead_code)]
 #[repr(C,packed)]
@@ -109,7 +109,9 @@ fn main() {
             vertex_buffer: &vbo
         }
     ];
-    let vao = VertexArray::new(&mut context, attributes, None).unwrap();
+    let indices: &[u16] = &[0, 1, 2];
+    let ibo = Buffer::new(&mut context, BufferTarget::IndexBuffer, BufferUsage::StaticDraw, indices).unwrap();
+    let vao = VertexArray::new(&mut context, attributes, Some(&ibo)).unwrap();
     let vs = Shader::new(&mut context, &ShaderSource(ShaderType::VertexShader, VS_SOURCE)).unwrap();
     let fs = Shader::new(&mut context, &ShaderSource(ShaderType::FragmentShader, FS_SOURCE)).unwrap();
     let program = Program::new(&mut context, &[vs, fs]).unwrap();
@@ -118,8 +120,8 @@ fn main() {
     let scale = uniform_info.find_global("scale").unwrap();
     program.uniform_f32(scale.location, scale.uniform_type, 1, &[1f32]).unwrap();
 
-    println!("{:#?}", program.attribute_info());
-    println!("{:#?}", uniform_info);
+    //println!("{:#?}", program.attribute_info());
+    //println!("{:#?}", uniform_info);
 
     while !window.should_close() {
         glfw.poll_events();
@@ -128,7 +130,8 @@ fn main() {
         }
 
         context.default_framebuffer().clear();
-        context.draw(&program, context.default_framebuffer(), &vao, PrimitiveMode::Triangles, 0, 3);
+        //context.draw(&program, context.default_framebuffer(), &vao, PrimitiveMode::Triangles, 0, 3);
+        context.draw_indexed(&program, context.default_framebuffer(), &vao, PrimitiveMode::Triangles, IndexType::UShort, 0, 3, 0);
 
         window.swap_buffers();
     }
