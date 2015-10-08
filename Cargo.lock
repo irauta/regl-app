@@ -2,6 +2,7 @@
 name = "regl-app"
 version = "0.1.0"
 dependencies = [
+ "cgmath 0.3.1 (git+https://github.com/bjz/cgmath-rs.git)",
  "gl 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glfw 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regl 0.1.0 (git+https://github.com/irauta/regl.git)",
@@ -22,22 +23,21 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "cgmath"
+version = "0.3.1"
+source = "git+https://github.com/bjz/cgmath-rs.git#c8b7db0a73a734ac26035df7771b27b33cfff6cf"
+dependencies = [
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "enum_primitive"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "gl"
-version = "0.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "gl_common 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "gl_generator 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "khronos_api 0.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -48,14 +48,6 @@ dependencies = [
  "gl_common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gl_generator 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "khronos_api 0.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "gl_common"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -98,11 +90,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "khronos_api"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "khronos_api"
 version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
@@ -141,9 +128,9 @@ dependencies = [
 [[package]]
 name = "regl"
 version = "0.1.0"
-source = "git+https://github.com/irauta/regl.git#bc6bf36c168fd04694aec37d323f529ee4d44f41"
+source = "git+https://github.com/irauta/regl.git#9f72bcf0178574993b27605bcb3d580e404ac806"
 dependencies = [
- "gl 0.0.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gl 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

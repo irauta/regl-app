@@ -11,3 +11,7 @@ version = "*"
 
 [dependencies.gl]
 version = "*"
+
+[dependencies.cgmath]
+#version = "*"
+git = "https://github.com/bjz/cgmath-rs.git"
