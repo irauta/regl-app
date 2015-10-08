@@ -129,7 +129,7 @@ impl Graphics {
             context: context,
             vao: vao,
             program: program,
-            camera_distance: 1.0,
+            camera_distance: 1.5,
             camera_orientation: (0.0, 0.0),
             projection_uniform: projection_location,
             worldview_uniform: worldview_location,
