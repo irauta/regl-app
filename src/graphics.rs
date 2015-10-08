@@ -1,7 +1,8 @@
 
+use ::cgmath::{Matrix4,Vector3,Point3};
 use regl::{Context,Shader,ShaderSource,ShaderType,Program,
     VertexArray,Buffer,BufferTarget,BufferUsage,RenderOption,
-    VertexAttribute,VertexAttributeType,PrimitiveMode,IndexType};
+    VertexAttribute,VertexAttributeType,PrimitiveMode,IndexType,UniformType};
 
 #[allow(dead_code)]
 #[repr(C,packed)]
@@ -33,24 +34,31 @@ impl Vertex {
     }
 }
 
-static VS_SOURCE: &'static str = "
+const YAW_MULTIPLIER: f32 = 1.0 / 60.0;
+const PITCH_MULTIPLIER: f32 = 1.0 / 60.0;
+const DISTANCE_MULTIPLIER: f32 = 0.5;
+
+const VS_SOURCE: &'static str = "
 #version 330 core
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec4 color;
 
-uniform float scale;
+uniform mat4 worldview;
+uniform mat4 projection;
 
 out vec4 v_color;
 
 void main() {
-    gl_Position.xyz = position * scale;
-    gl_Position.w = 1.0;
+    vec4 position = vec4(position, 1);
+    position = worldview * position;
+    position = projection * position;
+    gl_Position = position; //(worldview * projection) * position;
     v_color = color;
 }
 ";
 
-static FS_SOURCE: &'static str = "
+const FS_SOURCE: &'static str = "
 #version 330 core
 
 in vec4 v_color;
@@ -62,22 +70,28 @@ void main() {
 ";
 
 pub struct Graphics {
+    viewport_size: (i32, i32),
     context: Context,
     vao: VertexArray,
     program: Program,
+    camera_orientation: (f32, f32),
+    camera_distance: f32,
+    projection_uniform: i32,
+    worldview_uniform: i32,
 }
 
 impl Graphics {
-    pub fn new() -> Graphics {
+    pub fn new(width: i32, height: i32) -> Graphics {
         let mut context = ::regl::Context::new();
 
         context.set_option(RenderOption::CullingEnabled(false));
         context.default_framebuffer().clear_color(0.0, 0.0, 0.0, 1.0);
 
+        let z = -0.0;
         let vertices = &[
-            Vertex::new(-0.5f32, -0.5f32, 0f32, 255, 0, 0, 0),
-            Vertex::new(0.5f32, -0.5f32, 0f32, 0, 255, 0, 0),
-            Vertex::new(0f32, 0.5f32, 0f32, 0, 0, 255, 0),
+            Vertex::new(-0.5f32, -0.5f32, z, 255, 0, 0, 0),
+            Vertex::new(0.5f32, -0.5f32, z, 0, 255, 0, 0),
+            Vertex::new(0f32, 0.5f32, z, 0, 0, 255, 0),
         ];
         let vbo = Buffer::new(&mut context, BufferTarget::VertexBuffer, BufferUsage::StaticDraw, vertices).unwrap();
         let attributes = &[
@@ -107,27 +121,89 @@ impl Graphics {
         let fs = Shader::new(&mut context, &ShaderSource(ShaderType::FragmentShader, FS_SOURCE)).unwrap();
         let program = Program::new(&mut context, &[vs, fs]).unwrap();
 
-        let uniform_info = program.uniform_info();
-        let scale = uniform_info.find_global("scale").unwrap();
-        program.uniform_f32(scale.location, scale.uniform_type, 1, &[1f32]).unwrap();
-
-        //println!("{:#?}", program.attribute_info());
-        //println!("{:#?}", uniform_info);
+        let projection_location = program.uniform_location("projection").unwrap();
+        let worldview_location = program.uniform_location("worldview").unwrap();
 
         Graphics {
+            viewport_size: (width, height),
             context: context,
             vao: vao,
             program: program,
+            camera_distance: 1.0,
+            camera_orientation: (0.0, 0.0),
+            projection_uniform: projection_location,
+            worldview_uniform: worldview_location,
         }
     }
 
+    pub fn camera_orientation(&mut self, delta_x: f64, delta_y: f64) {
+        self.camera_orientation.0 += delta_x as f32;
+        self.camera_orientation.1 += delta_y as f32;
+        let max = ::std::f32::consts::FRAC_PI_2 / PITCH_MULTIPLIER * 0.95;
+        let min = -max;
+        self.camera_orientation.1 = self.camera_orientation.1.min(max).max(min);
+    }
+
+    pub fn camera_distance(&mut self, delta: f64) {
+        self.camera_distance += delta as f32;
+        let max = 15.0 / DISTANCE_MULTIPLIER;
+        let min = 0.5 / DISTANCE_MULTIPLIER;
+        self.camera_distance = self.camera_distance.min(max).max(min);
+    }
+
+    pub fn viewport_size(&mut self, width: i32, height: i32) {
+        self.viewport_size = (width, height);
+        self.context.viewport(0, 0, width, height);
+    }
+
     pub fn draw(&self) {
+        let fov = ::std::f32::consts::FRAC_PI_2 * 0.5;
+        let aspect = self.viewport_size.0 as f32 / self.viewport_size.1 as f32;
+        let projection = perspective(fov, aspect, 1.0, 10.0);
+        self.program.uniform_f32(self.projection_uniform, UniformType::FloatMat4, 1, floats(&projection)).unwrap();
+
+        let worldview = self.worldview();
+        self.program.uniform_f32(self.worldview_uniform, UniformType::FloatMat4, 1, floats(&worldview)).unwrap();
+
         self.context.default_framebuffer().clear();
-        //context.draw(&program, context.default_framebuffer(), &vao, PrimitiveMode::Triangles, 0, 3);
         self.context.draw_indexed(
             &self.program,
             self.context.default_framebuffer(),
             &self.vao,
             PrimitiveMode::Triangles, IndexType::UShort, 0, 3, 0);
     }
+
+    fn worldview(&self) -> Matrix4<f32> {
+        let distance_scale = DISTANCE_MULTIPLIER * self.camera_distance;
+        let yaw = self.camera_orientation.0 * YAW_MULTIPLIER;
+        let pitch = self.camera_orientation.1 * PITCH_MULTIPLIER;
+
+        // X has only one trig call, because pitch doesn't affect it
+        let x = yaw.sin() * distance_scale;
+        let y = pitch.sin() * yaw.cos() * distance_scale;
+        let z = yaw.cos() * pitch.cos() * distance_scale;
+
+        let eye = Point3::new(x, y, z);
+        let center = Point3::new(0.0, 0.0, 0.0);
+        let up = Vector3::unit_y();
+        Matrix4::look_at(&eye, &center, &up)
+    }
+}
+
+fn perspective(fov_y: f32, aspect: f32, z_near: f32, z_far: f32) -> Matrix4<f32> {
+    let f = cot(fov_y / 2.0);
+    Matrix4::new(
+        f / aspect, 0.0, 0.0,                               0.0,
+        0.0,        f,   0.0,                               0.0,
+        0.0,        0.0, (z_far + z_near)/(z_near - z_far), (2.0 * z_far * z_near)/(z_near - z_far),
+        0.0,        0.0, -1.0,                              0.0,
+    )
+}
+
+fn floats<T>(matrix: &Matrix4<T>) -> &[T; 16] {
+    AsRef::as_ref(matrix)
+}
+
+fn cot(angle: f32) -> f32 {
+    angle.tan().recip()
 }
