@@ -63,7 +63,7 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, app_
         glfw::WindowEvent::CursorPos(x, y) => {
             if let Some((prev_x, prev_y)) = app_state.tracked_position {
                 let (delta_x, delta_y) = (prev_x - x, prev_y - y);
-                app_state.graphics.camera_orientation(delta_x, -delta_y);
+                app_state.graphics.camera_orientation(delta_x, delta_y);
                 app_state.tracked_position = Some((x, y));
             }
         },

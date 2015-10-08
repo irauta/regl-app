@@ -1,5 +1,5 @@
 
-use ::cgmath::{Matrix4,Vector3,Point3};
+use ::cgmath::{Matrix4,Vector3,Point3,Basis3,Rotation3,Rotation,Rad};
 use regl::{Context,Shader,ShaderSource,ShaderType,Program,
     VertexArray,Buffer,BufferTarget,BufferUsage,RenderOption,
     VertexAttribute,VertexAttributeType,PrimitiveMode,IndexType,UniformType};
@@ -174,16 +174,14 @@ impl Graphics {
     }
 
     fn worldview(&self) -> Matrix4<f32> {
-        let distance_scale = DISTANCE_MULTIPLIER * self.camera_distance;
+        let scaled_distance = DISTANCE_MULTIPLIER * self.camera_distance;
         let yaw = self.camera_orientation.0 * YAW_MULTIPLIER;
         let pitch = self.camera_orientation.1 * PITCH_MULTIPLIER;
 
-        // X has only one trig call, because pitch doesn't affect it
-        let x = yaw.sin() * distance_scale;
-        let y = pitch.sin() * yaw.cos() * distance_scale;
-        let z = yaw.cos() * pitch.cos() * distance_scale;
+        let basis = Basis3::from_euler(rad(pitch), rad(yaw), rad(0.0));
+        let eye_vec = basis.rotate_vector(&Vector3::new(0.0, 0.0, scaled_distance));
+        let eye = Point3::new(eye_vec.x, eye_vec.y, eye_vec.z);
 
-        let eye = Point3::new(x, y, z);
         let center = Point3::new(0.0, 0.0, 0.0);
         let up = Vector3::unit_y();
         Matrix4::look_at(&eye, &center, &up)
@@ -206,4 +204,8 @@ fn floats<T>(matrix: &Matrix4<T>) -> &[T; 16] {
 
 fn cot(angle: f32) -> f32 {
     angle.tan().recip()
+}
+
+fn rad(value: f32) -> Rad<f32> {
+    Rad { s: value }
 }
